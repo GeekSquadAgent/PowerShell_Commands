@@ -1,0 +1,90 @@
+# HARDWARE DIAGNOSTICS
+
+# System Hardware Overview
+Get-ComputerInfo | Select-Object CsManufacturer, CsModel, BiosVersion, CsProcessors (System info)
+Get-CimInstance Win32_ComputerSystem (Manufacturer, model, total RAM)
+
+# CPU Information
+Get-CimInstance Win32_Processor | Select-Object Name, NumberOfCores, NumberOfLogicalProcessors, MaxClockSpeed, CurrentClockSpeed
+Get-Counter '\Processor(_Total)\% Processor Time' -SampleInterval 2 -MaxSamples 5 (CPU usage monitoring)
+
+# Memory (RAM) Information
+Get-CimInstance Win32_PhysicalMemory | Select-Object Manufacturer, Capacity, Speed, MemoryType, FormFactor
+Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property Capacity -Sum | Select-Object @{Name="Total RAM (GB)";Expression={[math]::Round($_.Sum/1GB,2)}}
+systeminfo | findstr /C:"Total Physical Memory" (Quick RAM check)
+
+# Motherboard Information
+Get-CimInstance Win32_BaseBoard | Select-Object Manufacturer, Product, SerialNumber, Version
+Get-CimInstance Win32_BIOS | Select-Object Manufacturer, SMBIOSBIOSVersion, ReleaseDate
+
+# Graphics Card (GPU)
+Get-CimInstance Win32_VideoController | Select-Object Name, DriverVersion, CurrentHorizontalResolution, CurrentVerticalResolution, AdapterRAM
+Get-CimInstance Win32_VideoController | Select-Object @{Name="VRAM (GB)";Expression={[math]::Round($_.AdapterRAM/1GB,2)}}
+
+# Storage Drives
+Get-PhysicalDisk | Select-Object FriendlyName, MediaType, Size, HealthStatus, OperationalStatus (All physical disks)
+Get-Disk | Select-Object Number, FriendlyName, HealthStatus, Size, PartitionStyle (Disk overview)
+wmic diskdrive get caption, size, status (Quick drive check)
+
+# SMART Data & Drive Health
+Get-PhysicalDisk | Get-StorageReliabilityCounter | Select-Object DeviceId, Temperature, Wear, ReadErrorsTotal, WriteErrorsTotal (Requires admin)
+Get-PhysicalDisk | Select-Object FriendlyName, HealthStatus, OperationalStatus, @{Name="Size (GB)";Expression={[math]::Round($_.Size/1GB,2)}}
+
+# Battery Information (Laptops)
+Get-CimInstance Win32_Battery | Select-Object EstimatedChargeRemaining, BatteryStatus, EstimatedRunTime
+powercfg /batteryreport /output "C:\battery-report.html" (Detailed battery health report)
+Get-CimInstance Win32_PortableBattery | Select-Object DeviceID, DesignCapacity, FullChargeCapacity
+
+# Temperature Monitoring (limited without 3rd party tools)
+Get-CimInstance MSAcpi_ThermalZoneTemperature -Namespace "root/wmi" | Select-Object @{Name="Temp (C)";Expression={($_.CurrentTemperature/10)-273.15}}
+
+# Device Manager via PowerShell
+Get-PnpDevice (All devices)
+Get-PnpDevice | Where-Object {$_.Status -eq "Error"} (Devices with errors)
+Get-PnpDevice | Where-Object {$_.Status -eq "Unknown"} (Unknown devices - driver issues)
+Get-PnpDevice | Where-Object {$_.Class -eq "Display"} (Display adapters)
+Get-PnpDevice | Where-Object {$_.Class -eq "Net"} (Network adapters)
+
+# Driver Information
+Get-WindowsDriver -Online -All | Select-Object Driver, ClassName, ProviderName, Date, Version (All installed drivers)
+Get-WindowsDriver -Online -All | Sort-Object Date -Descending | Select-Object -First 10 (Recently installed drivers)
+driverquery /v (Verbose driver list)
+
+# USB Devices
+Get-PnpDevice | Where-Object {$_.Class -eq "USB"} (All USB devices)
+Get-PnpDevice | Where-Object {$_.InstanceId -like "USB*"} | Select-Object FriendlyName, Status
+
+# Audio Devices
+Get-CimInstance Win32_SoundDevice | Select-Object Name, Manufacturer, Status
+
+# Network Hardware
+Get-NetAdapter | Select-Object Name, InterfaceDescription, Status, LinkSpeed, MacAddress
+Get-CimInstance Win32_NetworkAdapter | Select-Object Name, AdapterType, MACAddress, Speed
+
+# Monitor Information
+Get-CimInstance WmiMonitorID -Namespace root\wmi | Select-Object @{Name="Manufacturer";Expression={[System.Text.Encoding]::ASCII.GetString($_.ManufacturerName)}}, 
+    @{Name="Model";Expression={[System.Text.Encoding]::ASCII.GetString($_.UserFriendlyName)}}
+
+# Bluetooth Devices
+Get-PnpDevice | Where-Object {$_.Class -eq "Bluetooth"} | Select-Object FriendlyName, Status
+
+# Power Supply Information (limited)
+Get-CimInstance Win32_PowerSupply (Not always available on all systems)
+
+# Fan Speed (requires specific hardware/drivers)
+Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature (Limited support)
+
+# Serial Number & Asset Tags
+Get-CimInstance Win32_BIOS | Select-Object SerialNumber
+Get-CimInstance Win32_SystemEnclosure | Select-Object SMBIOSAssetTag
+
+# Hardware Change Detection
+Get-WinEvent -FilterHashtable @{LogName='System'; Id=20001,20003} -MaxEvents 20 (Device installation events)
+
+# Failing/Problem Hardware Detection
+Get-PnpDevice | Where-Object {$_.Status -ne "OK"} | Select-Object FriendlyName, Status, Class
+
+# Resource Usage by Hardware
+Get-Counter '\PhysicalDisk(*)\% Disk Time' (Disk usage)
+Get-Counter '\Memory\Available MBytes' (Available RAM)
+Get-Counter '\Network Interface(*)\Bytes Total/sec' (Network usage)
