@@ -1,0 +1,81 @@
+# USER & SECURITY
+
+# Local User Management
+Get-LocalUser (See all local accounts)
+Get-LocalUser | Select-Object Name, Enabled, LastLogon (User details)
+Get-LocalUser -Name "Username" (Check specific user)
+New-LocalUser -Name "Username" -Password (ConvertTo-SecureString "Password123" -AsPlainText -Force) -FullName "Full Name" (Create new user)
+Set-LocalUser -Name "Username" -Password (ConvertTo-SecureString "NewPassword123" -AsPlainText -Force) (Reset password)
+Enable-LocalUser -Name "Username" (Enable disabled account)
+Disable-LocalUser -Name "Username" (Disable account)
+Remove-LocalUser -Name "Username" (Delete user account)
+
+# Group Membership
+Get-LocalGroup (List all local groups)
+Get-LocalGroupMember -Group "Administrators" (Check who has admin rights)
+Get-LocalGroupMember -Group "Users" (See standard users)
+Add-LocalGroupMember -Group "Administrators" -Member "Username" (Add user to admin group)
+Remove-LocalGroupMember -Group "Administrators" -Member "Username" (Remove admin rights)
+
+# Currently Logged In Users
+query user (See who's logged in)
+Get-CimInstance Win32_ComputerSystem | Select-Object UserName (Current logged in user)
+Get-Process -IncludeUserName | Select-Object UserName -Unique (Users with running processes)
+
+# Windows Defender Status
+Get-MpComputerStatus (Complete Defender status)
+Get-MpComputerStatus | Select-Object AntivirusEnabled, RealTimeProtectionEnabled, IoavProtectionEnabled (Key protection status)
+Update-MpSignature (Update Defender definitions)
+Start-MpScan -ScanType QuickScan (Run quick scan)
+Start-MpScan -ScanType FullScan (Run full scan)
+Get-MpThreat (View detected threats)
+Get-MpThreatDetection (Threat detection history)
+Remove-MpThreat (Remove detected threats)
+
+# Defender Exclusions
+Get-MpPreference | Select-Object Exclusion* (View all exclusions)
+Add-MpPreference -ExclusionPath "C:\Path\To\Exclude" (Add folder exclusion)
+Remove-MpPreference -ExclusionPath "C:\Path\To\Exclude" (Remove exclusion)
+
+# User Profile Management
+Get-CimInstance Win32_UserProfile | Select-Object LocalPath, LastUseTime, Loaded (View all profiles)
+Get-CimInstance Win32_UserProfile | Where-Object {$_.Special -eq $false} (Non-system profiles only)
+
+# Password Policy
+net accounts (View password policy)
+Get-LocalUser | Select-Object Name, PasswordRequired, PasswordExpires (Password settings per user)
+
+# Security Policies & Audit
+secedit /export /cfg C:\secpolicy.cfg (Export security policy)
+auditpol /get /category:* (View audit policies)
+
+# User Account Control (UAC)
+Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "EnableLUA" (Check UAC status)
+
+# Windows Firewall
+Get-NetFirewallProfile (Check firewall status for all profiles)
+Get-NetFirewallProfile | Select-Object Name, Enabled (Firewall on/off status)
+Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True (Enable firewall all profiles)
+Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False (Disable firewall all profiles)
+Get-NetFirewallRule | Where-Object {$_.Enabled -eq $true} (View active firewall rules)
+
+# Check for Admin Privileges
+([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+# Returns True if running as admin, False if not
+
+# Security Event Logs
+Get-EventLog -LogName Security -Newest 50 (Recent security events)
+Get-EventLog -LogName Security -InstanceId 4624 -Newest 10 (Successful logons)
+Get-EventLog -LogName Security -InstanceId 4625 -Newest 10 (Failed logon attempts)
+Get-EventLog -LogName Security -InstanceId 4672 -Newest 10 (Admin logon events)
+
+# Account Lockout Status
+net user Username (Shows if account is locked)
+net user Username /active:yes (Unlock account)
+
+# Password Never Expires (common Geek Squad request)
+Set-LocalUser -Name "Username" -PasswordNeverExpires $true (Set password to never expire)
+Set-LocalUser -Name "Username" -PasswordNeverExpires $false (Require password expiration)
+
+# Remove User Profile (corrupted profile fix)
+Get-CimInstance Win32_UserProfile | Where-Object {$_.LocalPath -like "*Username*"} | Remove-CimInstance (Delete user profile - requires admin)
