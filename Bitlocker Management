@@ -1,0 +1,53 @@
+# BITLOCKER MANAGEMENT
+
+# Check BitLocker Status
+Get-BitLockerVolume (Check all volumes' encryption status)
+Get-BitLockerVolume -MountPoint "C:" (Check specific drive)
+manage-bde -status (Detailed BitLocker status - all drives)
+manage-bde -status C: (Specific drive status)
+
+# Enable/Disable BitLocker
+Enable-BitLocker -MountPoint "C:" -EncryptionMethod XtsAes256 -UsedSpaceOnly -RecoveryPasswordProtector (Enable with recovery password)
+Enable-BitLocker -MountPoint "C:" -TpmProtector (Enable with TPM)
+Disable-BitLocker -MountPoint "C:" (Disable BitLocker)
+
+# Recovery Key Management
+(Get-BitLockerVolume -MountPoint "C:").KeyProtector (View key protectors)
+Get-BitLockerVolume -MountPoint "C:" | Select-Object -ExpandProperty KeyProtector (Detailed key info)
+manage-bde -protectors -get C: (Get recovery key ID)
+manage-bde -protectors -add C: -RecoveryPassword (Add recovery password)
+BackupToAAD-BitLockerKeyProtector -MountPoint "C:" -KeyProtectorId "{ID}" (Backup key to Azure AD)
+
+# Unlock Drives
+Unlock-BitLocker -MountPoint "E:" -RecoveryPassword "123456-789012-345678-901234-567890-123456" (Unlock with recovery key)
+Unlock-BitLocker -MountPoint "E:" -Password (Prompts for password)
+
+# Suspend/Resume (useful before BIOS updates)
+Suspend-BitLocker -MountPoint "C:" -RebootCount 1 (Suspend for 1 reboot)
+Suspend-BitLocker -MountPoint "C:" -RebootCount 0 (Suspend indefinitely)
+Resume-BitLocker -MountPoint "C:" (Resume protection)
+
+# Encryption Progress
+Get-BitLockerVolume -MountPoint "C:" | Select-Object VolumeStatus, EncryptionPercentage (Check encryption progress)
+manage-bde -status C: (Shows encryption percentage)
+
+# Remove Key Protectors (before reinstalling OS, etc.)
+manage-bde -protectors -delete C: -type RecoveryPassword (Remove recovery password)
+manage-bde -protectors -delete C: -type TPM (Remove TPM protector)
+
+# Force Decryption (when disabling doesn't work)
+manage-bde -off C: (Decrypt drive)
+
+# Check TPM Status (BitLocker requirement)
+Get-Tpm (Check if TPM is present and ready)
+Get-TpmSupportedFeature (TPM capabilities)
+
+# Common Geek Squad Scenarios
+# Customer forgot password and needs recovery key:
+Get-BitLockerVolume -MountPoint "C:" | Select-Object -ExpandProperty KeyProtector | Where-Object {$_.KeyProtectorType -like "*Recovery*"}
+
+# Backup recovery key to file:
+manage-bde -protectors -get C: > C:\BitLocker-Recovery-Info.txt
+
+# Check if drive is actively encrypting:
+Get-BitLockerVolume | Where-Object {$_.VolumeStatus -eq "EncryptionInProgress"}
