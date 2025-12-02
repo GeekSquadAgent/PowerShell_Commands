@@ -1,0 +1,42 @@
+# NETWORK TROUBLESHOOTING
+
+# Active Connection Analysis (Agent Morra's Command)
+Get-NetTCPConnection -State Established | Where-Object { $_.RemoteAddress -ne '127.0.0.1' -and $_.RemoteAddress -ne '::1' } | Select-Object -ExpandProperty RemoteAddress | Sort-Object -Unique | ForEach-Object { try { $info = Invoke-RestMethod -Uri "https://ipinfo.io/$_/json"; [PSCustomObject]@{IP=$info.ip; Org=$info.org; Location="$($info.city), $($info.country)"} } catch { [PSCustomObject]@{IP=$_; Org='Error'; Location='N/A'} } } | Format-Table
+# Shows all active external connections with organization and location info - great for malware detection
+
+# Basic Connectivity
+Test-NetConnection -ComputerName google.com -Port 443 (Better than ping, tests specific ports)
+Test-Connection -ComputerName 8.8.8.8 -Count 4 (PowerShell ping)
+Test-NetConnection -ComputerName google.com -TraceRoute (Trace network path)
+
+# Network Adapter Info
+Get-NetAdapter (Quick view of all network adapters and their status)
+Get-NetAdapter | Where-Object {$_.Status -eq "Up"} (Show only active adapters)
+Get-NetAdapterStatistics (Traffic statistics per adapter)
+
+# IP Configuration
+Get-NetIPConfiguration (Clean output of IP settings)
+Get-NetIPAddress (All IP addresses on the system)
+ipconfig /all (Classic command - still works)
+
+# DNS Troubleshooting
+Clear-DnsClientCache (Clear DNS cache when internet acts weird)
+Get-DnsClientCache (View cached DNS entries)
+Resolve-DnsName google.com (Test DNS resolution)
+Get-DnsClientServerAddress (See configured DNS servers)
+
+# Network Reset Commands
+netsh winsock reset (Reset network stack)
+netsh int ip reset (Reset TCP/IP stack)
+ipconfig /release (Release IP)
+ipconfig /renew (Renew IP)
+ipconfig /flushdns (Flush DNS cache)
+
+# Firewall Status
+Get-NetFirewallProfile (Check firewall status for all profiles)
+Get-NetFirewallRule | Where-Object {$_.Enabled -eq $true -and $_.Direction -eq "Inbound"} (Active inbound rules)
+
+# Network Shares
+Get-SmbConnection (Active SMB connections)
+Get-SmbShare (Shared folders on this PC)
+net use (View mapped network drives)
