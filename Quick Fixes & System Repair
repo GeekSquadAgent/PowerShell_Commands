@@ -1,0 +1,118 @@
+# QUICK FIXES & SYSTEM REPAIR
+
+# System File Checker
+sfc /scannow (Scan and repair system files - takes 15-30 min)
+sfc /verifyonly (Scan only, no repair)
+sfc /scanfile="C:\Windows\System32\file.dll" (Scan specific file)
+
+# DISM (Deployment Image Servicing and Management)
+DISM /Online /Cleanup-Image /CheckHealth (Quick check for corruption)
+DISM /Online /Cleanup-Image /ScanHealth (Detailed scan - takes longer)
+DISM /Online /Cleanup-Image /RestoreHealth (Repair Windows image - use before SFC)
+DISM /Online /Cleanup-Image /RestoreHealth /Source:WIM:D:\sources\install.wim:1 /LimitAccess (Repair using Windows install media)
+
+# Component Store Cleanup
+DISM /Online /Cleanup-Image /StartComponentCleanup (Clean up old updates)
+DISM /Online /Cleanup-Image /StartComponentCleanup /ResetBase (Aggressive cleanup - can't uninstall updates after)
+DISM /Online /Cleanup-Image /AnalyzeComponentStore (Check component store size)
+
+# Windows Update Troubleshooting
+Get-WindowsUpdateLog (Generate update log file)
+Stop-Service wuauserv, bits, cryptsvc (Stop update services)
+Start-Service wuauserv, bits, cryptsvc (Start update services)
+Remove-Item C:\Windows\SoftwareDistribution\Download\* -Recurse -Force (Clear update cache)
+wuauclt /updatenow (Force check for updates - older Windows)
+usoclient StartScan (Force check for updates - Windows 10/11)
+usoclient StartDownload (Force download updates)
+usoclient StartInstall (Force install updates)
+
+# Reset Windows Update Components (nuclear option)
+net stop wuauserv
+net stop cryptSvc
+net stop bits
+net stop msiserver
+Ren C:\Windows\SoftwareDistribution SoftwareDistribution.old
+Ren C:\Windows\System32\catroot2 catroot2.old
+net start wuauserv
+net start cryptSvc
+net start bits
+net start msiserver
+
+# Reset Network Stack (fixes 90% of internet issues)
+netsh winsock reset (Reset Winsock catalog)
+netsh int ip reset (Reset TCP/IP stack)
+ipconfig /release (Release IP)
+ipconfig /renew (Renew IP)
+ipconfig /flushdns (Flush DNS cache)
+netsh advfirewall reset (Reset firewall to defaults)
+
+# App Reset & Reinstall
+Get-AppxPackage *AppName* | Reset-AppxPackage (Reset problematic app)
+Get-AppxPackage *AppName* | Remove-AppxPackage (Remove app)
+Get-AppxPackage -AllUsers | Foreach {Add-AppxPackage -DisableDevelopmentMode -Register "$($_.InstallLocation)\AppXManifest.xml"} (Reinstall all default apps)
+
+# Windows Store Reset
+wsreset.exe (Reset Microsoft Store cache)
+
+# Performance Troubleshooting
+Get-Process | Sort-Object CPU -Descending | Select-Object -First 10 (Top CPU users)
+Get-Process | Sort-Object WorkingSet -Descending | Select-Object -First 10 (Top memory users)
+Get-Service | Where-Object {$_.Status -eq "Running" -and $_.StartType -eq "Automatic"} (Running services)
+msconfig (Open System Configuration)
+resmon (Open Resource Monitor)
+
+# Startup Programs
+Get-CimInstance Win32_StartupCommand | Select-Object Name, Command, Location (List startup items)
+Get-ScheduledTask | Where-Object {$_.State -eq "Ready"} (Scheduled tasks)
+
+# Repair Boot Configuration (from WinRE or installation media)
+bootrec /fixmbr (Fix Master Boot Record)
+bootrec /fixboot (Fix boot sector)
+bootrec /scanos (Scan for Windows installations)
+bootrec /rebuildbcd (Rebuild boot configuration)
+
+# Registry Repairs (use with caution)
+sfc /scannow (This also fixes registry issues)
+DISM /Online /Cleanup-Image /RestoreHealth (Repairs registry corruption)
+
+# Check Disk Errors
+chkdsk C: /f /r (Fix errors and recover bad sectors - requires restart)
+chkdsk C: /scan (Quick scan for errors)
+
+# Clear Temp Files
+Remove-Item -Path "$env:TEMP\*" -Recurse -Force -ErrorAction SilentlyContinue (Clear user temp)
+Remove-Item -Path "C:\Windows\Temp\*" -Recurse -Force -ErrorAction SilentlyContinue (Clear Windows temp)
+Remove-Item -Path "C:\Windows\Prefetch\*" -Force -ErrorAction SilentlyContinue (Clear prefetch)
+
+# System Restore
+rstrui.exe (Open System Restore GUI)
+Get-ComputerRestorePoint (List restore points)
+Checkpoint-Computer -Description "Pre-Repair Checkpoint" (Create restore point)
+Enable-ComputerRestore -Drive "C:\" (Enable System Restore)
+
+# Windows Activation Troubleshooting
+slmgr /xpr (Check activation status)
+slmgr /ato (Force activation)
+slmgr /rearm (Reset activation timer - limited uses)
+
+# Repair Windows Image with Installation Media
+DISM /Online /Cleanup-Image /RestoreHealth /Source:D:\sources\install.esd (Using ESD file)
+DISM /Online /Cleanup-Image /RestoreHealth /Source:D:\sources\install.wim:1 (Using WIM file)
+
+# Reset This PC Options (from GUI or command)
+systemreset -cleanpc (Factory reset keeping files)
+systemreset -factoryreset (Full factory reset)
+
+# Fix Common Issues
+# Black screen after login - restart Windows Explorer
+Stop-Process -Name explorer -Force
+Start-Process explorer
+
+# Stuck Windows Update
+net stop wuauserv
+Remove-Item C:\Windows\SoftwareDistribution\DataStore\* -Recurse -Force
+net start wuauserv
+
+# Corrupted user profile - create new profile and migrate
+New-LocalUser -Name "NewUser" -Password (ConvertTo-SecureString "Password123" -AsPlainText -Force)
+Add-LocalGroupMember -Group "Administrators" -Member "NewUser"
