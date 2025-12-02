@@ -1,0 +1,75 @@
+# SOFTWARE MANAGEMENT
+
+# Winget (Windows Package Manager)
+winget search AppName (Search for available software)
+winget install AppName (Install software)
+winget install AppName --silent (Silent install, no prompts)
+winget uninstall AppName (Uninstall software)
+winget upgrade (List available updates)
+winget upgrade --all --accept-souce-agreements --accept-package-agreements (Update all installed software)
+winget upgrade AppName (Update specific software)
+winget list (List all installed software managed by winget)
+winget export -o C:\installed-apps.json (Export installed apps list)
+winget import -i C:\installed-apps.json (Install apps from exported list)
+
+# Common Winget Installs for Geek Squad
+winget install Google.Chrome
+winget install Mozilla.Firefox
+winget install Adobe.Acrobat.Reader.64-bit
+winget install VideoLAN.VLC
+winget install 7zip.7zip
+winget install Microsoft.VisualStudioCode
+
+# Check Installed Programs
+Get-WmiObject -Class Win32_Product | Select-Object Name, Version, Vendor (Slow but comprehensive)
+Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Select-Object DisplayName, DisplayVersion, Publisher (Faster registry method)
+Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Select-Object DisplayName, DisplayVersion, Publisher (32-bit apps on 64-bit Windows)
+
+# Uninstall Programs
+Get-WmiObject -Class Win32_Product | Where-Object {$_.Name -like "*AppName*"} | ForEach-Object {$_.Uninstall()} (Uninstall via WMI - slow)
+wmic product where name="AppName" call uninstall (Uninstall via WMIC)
+winget uninstall AppName (Preferred method if available)
+
+# Windows Store Apps (covered earlier but relevant here)
+Get-AppxPackage | Select-Object Name, PackageFullName (List all store apps)
+Get-AppxPackage *AppName* | Remove-AppxPackage (Remove store app)
+
+# Check Software Installation Dates
+Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | 
+    Select-Object DisplayName, InstallDate, DisplayVersion | 
+    Where-Object {$_.InstallDate -ne $null} | 
+    Sort-Object InstallDate -Descending
+
+# Recently Installed Programs (last 30 days)
+Get-WinEvent -FilterHashtable @{LogName='Application'; Id=11707; StartTime=(Get-Date).AddDays(-30)} | 
+    ForEach-Object {$_.Message}
+
+# Software Inventory Export
+Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*,
+                 HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* |
+    Select-Object DisplayName, DisplayVersion, Publisher, InstallDate |
+    Where-Object {$_.DisplayName -ne $null} |
+    Export-Csv C:\installed-software.csv -NoTypeInformation
+
+# Check for Bloatware/PUPs
+Get-WmiObject -Class Win32_Product | Where-Object {$_.Vendor -like "*Ask*" -or $_.Name -like "*Toolbar*"}
+
+# Program Files Directories
+Get-ChildItem "C:\Program Files" | Select-Object Name (64-bit programs)
+Get-ChildItem "C:\Program Files (x86)" | Select-Object Name (32-bit programs)
+
+# Chocolatey (if installed - alternative package manager)
+choco list --local-only (List installed packages)
+choco install AppName (Install software)
+choco uninstall AppName (Uninstall software)
+choco upgrade all (Update all packages)
+
+# Check Default Programs
+Get-ItemProperty HKLM:\Software\Classes\http\shell\open\command (Default browser)
+Get-ItemProperty HKLM:\Software\Classes\.pdf\OpenWithProgids (PDF handler)
+
+# MSI Installer Logs
+Get-ChildItem C:\Windows\Logs\CBS | Sort-Object LastWriteTime -Descending | Select-Object -First 5 (Recent install logs)
+
+# Repair Installed Software
+Get-WmiObject -Class Win32_Product | Where-Object {$_.Name -eq "AppName"} | ForEach-Object {$_.Reinstall()} (Repair via WMI)
