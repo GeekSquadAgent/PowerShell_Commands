@@ -1,0 +1,61 @@
+# DISK & STORAGE
+
+# Disk Health & Status
+Get-Disk (Check disk health and status)
+Get-PhysicalDisk | Select-Object FriendlyName, HealthStatus, OperationalStatus (Check drive health)
+Get-PhysicalDisk | Get-StorageReliabilityCounter (SMART data and wear info) Elevated Privileges Required
+wmic diskdrive get status (Quick health check - should return "OK") This commandline tool will be deprecated in the future
+
+# Volume & Space Information
+Get-Volume (See all drives and their free space)
+Get-PSDrive -PSProvider FileSystem (PowerShell view of drives)
+Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | Select-Object DeviceID, 
+    @{Name="Size(GB)";Expression={[math]::Round($_.Size/1GB,2)}},
+    @{Name="FreeSpace(GB)";Expression={[math]::Round($_.FreeSpace/1GB,2)}},
+    @{Name="PercentFree";Expression={[math]::Round(($_.FreeSpace/$_.Size)*100,2)}}
+
+# Partition Information
+Get-Partition (View all partitions)
+Get-Partition -DiskNumber 0 (View partitions on specific disk)
+diskpart (Launch disk partitioning tool)
+
+# Disk Performance
+Get-PhysicalDisk | Get-StorageReliabilityCounter | Select-Object DeviceId, Temperature, Wear (Drive temperature and wear)
+Get-Counter '\PhysicalDisk(*)\Avg. Disk Queue Length' (Disk queue monitoring)
+Get-Counter '\PhysicalDisk(*)\% Disk Time' (Disk usage percentage)
+
+# File System Checks
+chkdsk C: /scan (Quick scan for errors - no fix) Elevated Priv Needed
+chkdsk C: /f (Fix file system errors - requires restart)
+Repair-Volume -DriveLetter C -Scan (PowerShell volume scan)
+Repair-Volume -DriveLetter C -OfflineScanAndFix (Offline repair)
+
+# Storage Optimization
+Optimize-Volume -DriveLetter C -Defrag (Defragment HDD)
+Optimize-Volume -DriveLetter C -ReTrim (TRIM for SSD)
+Optimize-Volume -DriveLetter C -Analyze (Analyze fragmentation)
+
+# Storage Spaces & Pools
+Get-StoragePool (View storage pools)
+Get-VirtualDisk (View virtual disks)
+
+# Disk Cleanup
+cleanmgr /sageset:1 (Configure cleanup options)
+cleanmgr /sagerun:1 (Run configured cleanup)
+
+# BitLocker Status
+Get-BitLockerVolume (Check BitLocker encryption status)
+manage-bde -status (Detailed BitLocker info)
+
+# USB & Removable Drives
+Get-Disk | Where-Object {$_.BusType -eq "USB"} (Show USB drives)
+Get-Volume | Where-Object {$_.DriveType -eq "Removable"} (Removable drives)
+
+# Folder Size Analysis
+Get-ChildItem C:\Users -Directory | ForEach-Object {
+    [PSCustomObject]@{
+        Folder = $_.FullName
+        SizeGB = [math]::Round((Get-ChildItem $_.FullName -Recurse -ErrorAction SilentlyContinue | 
+                 Measure-Object -Property Length -Sum).Sum / 1GB, 2)
+    }
+} | Sort-Object SizeGB -Descending
