@@ -1,0 +1,52 @@
+# SYSTEM INFORMATION & DIAGNOSTICS
+
+# Basic System Info
+Get-ComputerInfo (Comprehensive system details in one command)
+systeminfo (Classic command that still works - faster for quick checks)
+Get-CimInstance Win32_ComputerSystem (Manufacturer, model, domain info)
+Get-CimInstance Win32_BIOS (BIOS version, serial number)
+
+# Operating System Details
+Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version, BuildNumber, OSArchitecture
+(Get-WmiObject Win32_OperatingSystem).LastBootUpTime (Last restart time)
+[System.Environment]::OSVersion (Quick OS version check)
+
+# Hardware Information
+Get-CimInstance Win32_Processor | Select-Object Name, NumberOfCores, NumberOfLogicalProcessors
+Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property Capacity -Sum (Total RAM)
+Get-CimInstance Win32_VideoController | Select-Object Name, DriverVersion, VideoModeDescription
+
+# Event Logs & Errors
+Get-EventLog -LogName System -Newest 50 (Check recent system errors)
+Get-EventLog -LogName Application -EntryType Error -Newest 20 (Application errors)
+Get-WinEvent -FilterHashtable @{LogName='System'; Level=2,3; StartTime=(Get-Date).AddDays(-7)} (Critical/Error events last 7 days)
+Get-EventLog -LogName System -Source "Microsoft-Windows-WindowsUpdateClient" -Newest 10 (Windows Update history)
+
+# Performance & Resource Usage
+Get-Process | Sort-Object CPU -Descending | Select-Object -First 10 (Top CPU hogs)
+Get-Process | Sort-Object WorkingSet -Descending | Select-Object -First 10 (Top memory users)
+Get-Counter '\Processor(_Total)\% Processor Time' -SampleInterval 2 -MaxSamples 5 (CPU usage monitoring)
+Get-CimInstance Win32_PerfFormattedData_PerfOS_Memory (Memory statistics)
+
+# Service Status
+Get-Service | Where-Object {$_.Status -eq "Stopped"} (Find stopped services)
+Get-Service | Where-Object {$_.StartType -eq "Automatic" -and $_.Status -ne "Running"} (Auto services not running)
+Get-Service -Name wuauserv, BITS, cryptsvc (Check Windows Update services)
+
+# Driver Information
+Get-WindowsDriver -Online -All (List all installed drivers)
+Get-PnpDevice | Where-Object {$_.Status -eq "Error"} (Devices with errors)
+Get-PnpDevice | Where-Object {$_.Status -eq "Unknown"} (Unknown devices - usually driver issues)
+
+# Battery Health (for laptops)
+powercfg /batteryreport /output "C:\battery-report.html" (Generate detailed battery report)
+Get-CimInstance Win32_Battery | Select-Object EstimatedChargeRemaining, BatteryStatus
+
+# Temperature & Thermal (limited without 3rd party tools)
+Get-CimInstance MSAcpi_ThermalZoneTemperature -Namespace "root/wmi" (If available)
+
+# Quick Health Check Script
+Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | Select-Object DeviceID, 
+    @{Name="Size(GB)";Expression={[math]::Round($_.Size/1GB,2)}},
+    @{Name="FreeSpace(GB)";Expression={[math]::Round($_.FreeSpace/1GB,2)}},
+    @{Name="PercentFree";Expression={[math]::Round(($_.FreeSpace/$_.Size)*100,2)}}
