@@ -79,3 +79,6 @@ Set-LocalUser -Name "Username" -PasswordNeverExpires $false (Require password ex
 
 # Remove User Profile (corrupted profile fix)
 Get-CimInstance Win32_UserProfile | Where-Object {$_.LocalPath -like "*Username*"} | Remove-CimInstance (Delete user profile - requires admin)
+
+# Turn OFF SMB Client Security Signing 
+Set-SmbClientConfiguration -RequireSecuritySignature $false ( For error when trying to mount network iso )
