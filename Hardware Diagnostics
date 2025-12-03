@@ -1,5 +1,8 @@
 # HARDWARE DIAGNOSTICS
 
+perfmon /report 
+(Generate a report detailing the status of local hardware resources, system response times, and processes on the local computer along with system information and configuration data. This report includes suggestions for ways to maximize performance and streamline system operation. Membership in the local Administrators group, or equivalent, is the minimum required to run this Data Collector Set.)
+
 # System Hardware Overview
 Get-ComputerInfo | Select-Object CsManufacturer, CsModel, BiosVersion, CsProcessors (System info)
 Get-CimInstance Win32_ComputerSystem (Manufacturer, model, total RAM)
